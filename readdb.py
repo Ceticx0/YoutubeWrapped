@@ -1,5 +1,4 @@
 import sqlite3
-from pprint import pprint
 
 conn = sqlite3.connect('youtube_data.db')
 cursor = conn.cursor()
