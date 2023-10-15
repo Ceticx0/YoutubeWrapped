@@ -5,7 +5,6 @@ import datetime
 import httplib2
 import requests
 import sqlite3
-import typing
 from googleapiclient import discovery
 from dataclasses import dataclass
 from tqdm import tqdm
@@ -95,7 +94,7 @@ def get_video_info(video_ids) -> list[Video]:
         completed_videos[i].is_short = is_short_results[i][0]
 
     return completed_videos
-dc
+
 
 conn = sqlite3.connect('youtube_data.db')
 cursor = conn.cursor()
