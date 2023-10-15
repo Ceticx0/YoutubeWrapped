@@ -6,15 +6,14 @@ cursor.execute("SELECT * FROM youtube_data")
 videos = cursor.fetchall()
 
 channels = {}
-for video, date, channel, name in videos:
-# for vid_id, duration, channel, name, tags, title, likeCount, viewCount, short in videos:
+for video, date, channel in videos:
     if channel in channels:
-        channels[channel][0] += 1
+        channels[channel] += 1
     else:
-        channels[channel] = [1, name]
+        channels[channel] = 1
 
-sorted_channels = sorted(channels.items(), reverse=True, key=lambda x: x[1][0])
-for index, (channel, (count, name)) in enumerate(sorted_channels):
-    print(f"{index+1}. {name}: {count}\t|\t{channel}")
+sorted_channels = sorted(channels.items(), reverse=True, key=lambda x: x[1])
+for index, (channel, count) in enumerate(sorted_channels):
+    print(f"{index+1}. {channel}: {count}")
 
 print(len(videos))
