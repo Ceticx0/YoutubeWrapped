@@ -26,7 +26,7 @@ Although it's pretty easy to add more.
 
 ## Usage
 1. Create apiKey.json file with ["Your api key here"] inside
-2. Change the location of your watch history html file in main.py and run it
+2. Change the location of your watch history html file in read_html_fil.py and run it
 to save the info to youtube_data.db
 3. Run add_api_data.py to get all the info from the youtube api and add it to youtube_data.db again
 4. Uncomment whatever you want to see at the bottom of data_analysis.py and run it

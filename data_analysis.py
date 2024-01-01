@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import sqlite3
 import json
 from datetime import timedelta
+from dateutil import parser
 from pprint import pprint
 
 
@@ -107,9 +108,23 @@ if __name__ == '__main__':
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM video_data WHERE short = 0")
     videos = cursor.fetchall()
+
+    # get videos from specific year
+    current_year_videos = []
+    for video_id, duration, channel_id, channel_name, tags, title, likeCount, viewCount, short in videos:
+        cursor.execute("SELECT date_watched FROM youtube_data WHERE video_url LIKE ?",
+                       (f'%{video_id}%',))  # Assuming video_url contains the video_id
+        date_watched = cursor.fetchone()[0]
+        year = parser.parse(date_watched).year  # TODO: add tzinfos argument
+        if year == 2023:
+            current_year_videos.append(
+                (video_id, duration, channel_id, channel_name, tags, title, likeCount, viewCount, short)
+            )
+
     # print_top_channels(videos)
     # print_top_videos(videos)
     # print_top_tags(videos)
     # print_avg_like_view_count(videos)
     # print_avg_duration(videos)
     print(len(videos))
+    print(len(current_year_videos))
