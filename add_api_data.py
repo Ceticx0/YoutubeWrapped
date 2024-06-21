@@ -5,6 +5,7 @@ import datetime
 import httplib2
 import requests
 import sqlite3
+from collections import Counter
 from googleapiclient import discovery
 from dataclasses import dataclass
 from tqdm import tqdm
@@ -25,6 +26,7 @@ class Video:
     tags: str = None
     likeCount: int = -1
     viewCount: int = -1
+    watchCount: int = -1
 
 
 def is_short(vid_id: str, i):
@@ -65,7 +67,7 @@ def fetch_video_info(api, video_ids, http_lib):
     return response
 
 
-def get_video_info(video_ids) -> list[Video]:
+def get_video_info(video_ids: list[str]) -> list[Video]:
     completed_videos: list[Video] = []
     http = httplib2.Http()  # Makes YouTube api work multithreaded
 
@@ -92,6 +94,7 @@ def get_video_info(video_ids) -> list[Video]:
         completed_videos[i].likeCount = int(video['statistics'].get('likeCount') or -1)
         completed_videos[i].viewCount = int(video['statistics'].get('viewCount') or -1)
         completed_videos[i].is_short = is_short_results[i][0]
+        completed_videos[i].watchCount = vid_counts[video['id']]
 
     return completed_videos
 
@@ -107,7 +110,8 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS video_data (
                     title TEXT,
                     likeCount INTEGER,
                     viewCount INTEGER,
-                    short INTEGER
+                    short INTEGER,
+                    watchCount INTEGER
                 )''')
 cursor.execute("DELETE FROM video_data")
 conn.commit()
@@ -115,29 +119,18 @@ conn.commit()
 cursor.execute("SELECT video_url FROM youtube_data")
 videos = cursor.fetchall()
 
-all_ids = list([url[0][url[0].rindex('=') + 1:] for url in videos])
-# all_ids] = []
-# try:
-#     for url in videos:
-#         all_ids.append(url[0][url[0].rindex('=') + 1:])
-# except AttributeError as e:
-#     print(url)
-#     print(url[0])]
-#     breakpoint()
-
+vid_counts = Counter([url[0][url[0].rindex('=') + 1:] for url in videos])  # id: count
 
 api_fetch_limit = 50
-
-num_batches = (len(all_ids) // api_fetch_limit) + 1 if len(all_ids) % api_fetch_limit != 0 else len(
-    all_ids) // api_fetch_limit
+num_batches = (len(vid_counts) // api_fetch_limit) + 1 if len(vid_counts) % api_fetch_limit != 0 else len(
+    vid_counts) // api_fetch_limit
 current_id = 0
 skipped_vids = 0
 
-with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(all_ids)) as progress:
-    print("Running...")
+with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(vid_counts)) as progress:
     f = []
     for i in range(num_batches):
-        current_ids = list(set(all_ids[current_id:current_id + api_fetch_limit]))
+        current_ids = list(vid_counts.keys())[current_id:current_id + api_fetch_limit]
         f.append(executor.submit(get_video_info, current_ids))
         current_id += api_fetch_limit
 
@@ -150,10 +143,10 @@ with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(all_ids
                     continue
 
                 cursor.execute('INSERT INTO video_data '
-                               '(video_id, duration, channel_id, channel_name, tags, title, likeCount, viewCount, short) '
-                               'VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                               '(video_id, duration, channel_id, channel_name, tags, title, likeCount, viewCount, short, watchCount) '
+                               'VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                (video.vid_id, video.duration, video.channel_id, video.channel_name, video.tags,
-                                video.title, video.likeCount, video.viewCount, video.is_short))
+                                video.title, video.likeCount, video.viewCount, video.is_short, video.watchCount))
                 progress.update()
             conn.commit()
         except Exception as e:
