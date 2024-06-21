@@ -1,7 +1,6 @@
-# For some reason when i wrote this I didnt realize you could download the data as json and not html
-from pyquery import PyQuery
 import sqlite3
 import random
+import json
 
 conn = sqlite3.connect('youtube_data.db')
 cursor = conn.cursor()
@@ -11,20 +10,20 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS youtube_data (
                     channel_url TEXT
                 )''')
 
-html_file = "C:\\Users\\Gavin\\Downloads\\takeout-20231229T192227Z-001\\Takeout\\YouTube and YouTube Music\\history\\watch-history.html"
+file_path = "C:\\Users\\Gavin\\Downloads\\takeout-20240620T224529Z-001\\Takeout\\YouTube and YouTube Music\\history\\watch-history.json"
 seen_channels = {}
 
-with open(html_file, encoding='utf8') as html:
-    pq = PyQuery(html.read())
-
+with open(file_path, encoding='utf8') as json_file:
+    watch_history = json.load(json_file)
+    print(watch_history[1122])
     try:
-        for index, outer_cell in enumerate(pq('div.outer-cell.mdl-cell.mdl-cell--12-col.mdl-shadow--2dp')):
-            video_url = pq(outer_cell)('a[href^="https://www.youtube.com/watch?v="]').attr('href')
-            date_watched = pq(outer_cell)('div.mdl-typography--body-1').text().split('\n')[-1]
-            channel_url = pq(outer_cell)('a[href^="https://www.youtube.com/channel/"]').attr('href')
-
-            if not channel_url or not video_url:
+        for index, video in enumerate(watch_history):
+            if not video.get("subtitles") or not video.get("titleUrl"):
                 continue  # skip deleted channels, etc
+
+            video_url = video["titleUrl"]
+            date_watched = video["time"]
+            channel_url = video["subtitles"][0]["url"]
             channel_id = channel_url[channel_url.rindex('/')+1:]
 
             if random.random() > 0.994:
@@ -32,6 +31,12 @@ with open(html_file, encoding='utf8') as html:
 
             cursor.execute('INSERT INTO youtube_data (video_url, date_watched, channel_url) VALUES (?, ?, ?)',
                            (video_url, date_watched, channel_url))
+
+        print(f"{index} videos in total since {date_watched}")
+
+    except KeyError as e:
+        print("KeyError found at json index {}".format(index))
+        print(e)
     except Exception as e:
         conn.commit()
         conn.close()

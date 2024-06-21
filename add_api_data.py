@@ -69,7 +69,7 @@ def get_video_info(video_ids) -> list[Video]:
     completed_videos: list[Video] = []
     http = httplib2.Http()  # Makes YouTube api work multithreaded
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         f = []
         for (i, id) in enumerate(video_ids):
             f.append(executor.submit(is_short, id, i))
@@ -114,16 +114,27 @@ conn.commit()
 
 cursor.execute("SELECT video_url FROM youtube_data")
 videos = cursor.fetchall()
-# videos = set(videos)
+
 all_ids = list([url[0][url[0].rindex('=') + 1:] for url in videos])
+# all_ids] = []
+# try:
+#     for url in videos:
+#         all_ids.append(url[0][url[0].rindex('=') + 1:])
+# except AttributeError as e:
+#     print(url)
+#     print(url[0])]
+#     breakpoint()
+
+
 api_fetch_limit = 50
 
 num_batches = (len(all_ids) // api_fetch_limit) + 1 if len(all_ids) % api_fetch_limit != 0 else len(
     all_ids) // api_fetch_limit
 current_id = 0
+skipped_vids = 0
 
 with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(all_ids)) as progress:
-
+    print("Running...")
     f = []
     for i in range(num_batches):
         current_ids = list(set(all_ids[current_id:current_id + api_fetch_limit]))
@@ -135,7 +146,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(all_ids
         try:
             for video in result:
                 if not video.vid_id:
-                    print("Video deleted or other, skipping...")
+                    skipped_vids += 1
                     continue
 
                 cursor.execute('INSERT INTO video_data '
@@ -150,5 +161,6 @@ with concurrent.futures.ThreadPoolExecutor() as executor, tqdm(total=len(all_ids
             print(e)
             print(e.with_traceback(e.__traceback__))
 
+print("skipped {} deleted/broken vids".format(skipped_vids))
 conn.commit()
 conn.close()

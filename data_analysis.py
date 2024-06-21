@@ -41,7 +41,11 @@ def print_top_videos(videos):
             vids[title] = [1, vid_id]
 
     sorted_videos = sorted(vids.items(), reverse=True, key=lambda x: x[1][0])
-    for index, (vid_title, (count, video_id)) in enumerate(sorted_videos):
+    # print(sorted_videos[:500])
+    print("length:" + str(len(vids)))
+    len(videos)
+    # print(sorted_videos.reverse())
+    for index, (vid_title, (count, video_id)) in enumerate(sorted_videos[:100]):
         print(f"{index + 1}. {vid_title}: {count}\t|\thttps://www.youtube.com/watch?v={video_id}")
 
 
@@ -106,7 +110,8 @@ def print_avg_duration(videos):
 if __name__ == '__main__':
     conn = sqlite3.connect('youtube_data.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM video_data WHERE short = 0")
+    # cursor.execute("SELECT * FROM video_data WHERE short = 0")
+    cursor.execute("SELECT * FROM video_data")
     videos = cursor.fetchall()
 
     # get videos from specific year
@@ -116,15 +121,16 @@ if __name__ == '__main__':
                        (f'%{video_id}%',))  # Assuming video_url contains the video_id
         date_watched = cursor.fetchone()[0]
         year = parser.parse(date_watched).year  # TODO: add tzinfos argument
-        if year == 2023:
+        if year == 2024:
             current_year_videos.append(
                 (video_id, duration, channel_id, channel_name, tags, title, likeCount, viewCount, short)
             )
 
-    # print_top_channels(videos)
-    # print_top_videos(videos)
-    # print_top_tags(videos)
-    # print_avg_like_view_count(videos)
-    # print_avg_duration(videos)
+    print("Calculating Stats...")
     print(len(videos))
     print(len(current_year_videos))
+    # print_top_channels(videos)]
+    print_top_videos(videos)
+    print_top_tags(videos)
+    print_avg_like_view_count(videos)
+    print_avg_duration(videos)
